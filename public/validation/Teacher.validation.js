@@ -8,6 +8,10 @@ export const createTeacherSchema = z.object({
         .string()
         .min(2, { message: "Last name must be at least 2 characters long" })
         .max(50, { message: "Last name cannot exceed 50 characters" }),
+    teacherLoginId: z
+        .string()
+        .min(3, { message: "Teacher Login ID must be at least 3 characters long" })
+        .max(50, { message: "Teacher Login ID cannot exceed 50 characters" }),
     email: z
         .string()
         .email({ message: "Invalid email address format" }),
@@ -23,6 +27,10 @@ export const createTeacherSchema = z.object({
     schoolId: z
         .string()
         .uuid({ message: "Invalid School ID format" }),
+    password: z
+        .string()
+        .min(6, { message: "Password must be at least 6 characters long" })
+        .optional(),
 });
 export const updateTeacherSchema = createTeacherSchema.partial().omit({ schoolId: true });
 //# sourceMappingURL=Teacher.validation.js.map

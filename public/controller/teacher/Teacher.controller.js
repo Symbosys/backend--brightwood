@@ -3,6 +3,7 @@ import { createTeacherSchema, updateTeacherSchema } from "../../validation/Teach
 import prisma from "../../config/prisma.js";
 import { ErrorResponse, SuccessResponse } from "../../utils/response.util.js";
 import { statusCode } from "../../types/types.js";
+import bcrypt from "bcryptjs";
 export const createTeacher = asyncHandler(async (req, res) => {
     const data = createTeacherSchema.parse(req.body);
     // Check if school exists
@@ -19,10 +20,21 @@ export const createTeacher = asyncHandler(async (req, res) => {
     if (existingTeacher) {
         throw new ErrorResponse("Teacher with this email already exists", statusCode.Conflict);
     }
+    // Check for unique teacherLoginId
+    const existingLoginId = await prisma.teacher.findUnique({
+        where: { teacherLoginId: data.teacherLoginId },
+    });
+    if (existingLoginId) {
+        throw new ErrorResponse("Teacher Login ID already exists", statusCode.Conflict);
+    }
+    if (data.password) {
+        data.password = await bcrypt.hash(data.password, 10);
+    }
     const teacher = await prisma.teacher.create({
         data,
     });
-    SuccessResponse(res, "Teacher created successfully", teacher, statusCode.Created);
+    const { password: _, ...teacherData } = teacher;
+    SuccessResponse(res, "Teacher created successfully", teacherData, statusCode.Created);
 });
 export const getAllTeachers = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, search, schoolId } = req.query;
@@ -38,6 +50,7 @@ export const getAllTeachers = asyncHandler(async (req, res) => {
             { firstName: { contains: String(search) } },
             { lastName: { contains: String(search) } },
             { email: { contains: String(search) } },
+            { teacherLoginId: { contains: String(search) } },
         ];
     }
     const [teachers, total] = await Promise.all([
@@ -112,11 +125,24 @@ export const updateTeacher = asyncHandler(async (req, res) => {
             throw new ErrorResponse("Teacher with this email already exists", statusCode.Conflict);
         }
     }
+    // Check for teacherLoginId uniqueness if teacherLoginId is being updated
+    if (data.teacherLoginId) {
+        const existingLoginId = await prisma.teacher.findUnique({
+            where: { teacherLoginId: data.teacherLoginId },
+        });
+        if (existingLoginId && existingLoginId.id !== id) {
+            throw new ErrorResponse("Teacher Login ID already exists", statusCode.Conflict);
+        }
+    }
+    if (data.password) {
+        data.password = await bcrypt.hash(data.password, 10);
+    }
     const updatedTeacher = await prisma.teacher.update({
         where: { id },
         data,
     });
-    SuccessResponse(res, "Teacher updated successfully", updatedTeacher, statusCode.OK);
+    const { password: _, ...teacherWithoutPassword } = updatedTeacher;
+    SuccessResponse(res, "Teacher updated successfully", teacherWithoutPassword, statusCode.OK);
 });
 export const deleteTeacher = asyncHandler(async (req, res) => {
     const { id } = req.params;

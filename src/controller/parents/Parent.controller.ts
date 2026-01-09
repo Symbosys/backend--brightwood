@@ -4,6 +4,7 @@ import { createParentSchema, updateParentSchema } from "../../validation/Parent.
 import prisma from "../../config/prisma.js";
 import { ErrorResponse, SuccessResponse } from "../../utils/response.util.js";
 import { statusCode } from "../../types/types.js";
+import bcrypt from "bcryptjs";
 
 /**
  * @desc    Create a new parent
@@ -24,6 +25,19 @@ export const createParent = asyncHandler(async (req: Request, res: Response) => 
         }
     }
 
+    // 2. Check if parentsLoginId already exists
+    const existingLoginId = await prisma.parent.findUnique({
+        where: { parentsLoginId: data.parentsLoginId },
+    });
+
+    if (existingLoginId) {
+        throw new ErrorResponse("Parent Login ID already exists", statusCode.Conflict);
+    }
+
+    if (data.password) {
+        data.password = await bcrypt.hash(data.password, 10);
+    }
+
     // 2. Create parent and link students if provided
     const parent = await prisma.parent.create({
         data: {
@@ -40,7 +54,9 @@ export const createParent = asyncHandler(async (req: Request, res: Response) => 
         }
     });
 
-    SuccessResponse(res, "Parent created successfully", parent, statusCode.Created);
+    const { password: _, ...parentWithoutPassword } = parent;
+
+    SuccessResponse(res, "Parent created successfully", parentWithoutPassword, statusCode.Created);
 });
 
 /**
@@ -49,7 +65,7 @@ export const createParent = asyncHandler(async (req: Request, res: Response) => 
  * @access  Private
  */
 export const getAllParents = asyncHandler(async (req: Request, res: Response) => {
-    const { page = 1, limit = 10, search } = req.query;
+    const { page = 1, limit = 10, search, schoolId, relationship } = req.query;
 
     const pageNumber = Number(page);
     const limitNumber = Number(limit);
@@ -57,12 +73,25 @@ export const getAllParents = asyncHandler(async (req: Request, res: Response) =>
 
     const whereClause: any = {};
 
+    if (schoolId) {
+        whereClause.children = {
+            some: {
+                schoolId: String(schoolId)
+            }
+        };
+    }
+
+    if (relationship) {
+        whereClause.relationship = relationship;
+    }
+
     if (search) {
         whereClause.OR = [
             { firstName: { contains: String(search) } },
             { lastName: { contains: String(search) } },
             { email: { contains: String(search) } },
             { phone: { contains: String(search) } },
+            { parentsLoginId: { contains: String(search) } },
         ];
     }
 
@@ -151,6 +180,21 @@ export const updateParent = asyncHandler(async (req: Request, res: Response) => 
         }
     }
 
+    // Check parentsLoginId uniqueness if parentsLoginId is being updated
+    if (data.parentsLoginId && data.parentsLoginId !== parent.parentsLoginId) {
+        const existingLoginId = await prisma.parent.findUnique({
+            where: { parentsLoginId: data.parentsLoginId },
+        });
+
+        if (existingLoginId) {
+            throw new ErrorResponse("Parent Login ID already exists", statusCode.Conflict);
+        }
+    }
+
+    if (data.password) {
+        data.password = await bcrypt.hash(data.password, 10);
+    }
+
     const updatedParent = await prisma.parent.update({
         where: { id },
         data: {
@@ -164,7 +208,9 @@ export const updateParent = asyncHandler(async (req: Request, res: Response) => 
         }
     });
 
-    SuccessResponse(res, "Parent updated successfully", updatedParent, statusCode.OK);
+    const { password: _, ...parentWithoutPassword } = updatedParent;
+
+    SuccessResponse(res, "Parent updated successfully", parentWithoutPassword, statusCode.OK);
 });
 
 /**

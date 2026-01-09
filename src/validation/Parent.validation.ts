@@ -13,6 +13,11 @@ export const createParentSchema = z.object({
         .min(2, "Last name must be at least 2 characters")
         .max(50, "Last name cannot exceed 50 characters")
         .trim(),
+    parentsLoginId: z
+        .string()
+        .min(3, "Parent Login ID must be at least 3 characters")
+        .max(50, "Parent Login ID cannot exceed 50 characters")
+        .trim(),
     email: z
         .string()
         .email("Invalid email address")
@@ -32,6 +37,7 @@ export const createParentSchema = z.object({
         .or(z.literal("")),
     relationship: ParentRelationshipEnum.optional(),
     studentIds: z.array(z.string().uuid("Invalid Student ID")).optional(),
+    password: z.string().min(6, "Password must be at least 6 characters").optional(),
 });
 
 export const updateParentSchema = createParentSchema.partial();

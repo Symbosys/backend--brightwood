@@ -3,6 +3,7 @@ import { createStudentSchema, updateStudentSchema } from "../../validation/Stude
 import prisma from "../../config/prisma.js";
 import { ErrorResponse, SuccessResponse } from "../../utils/response.util.js";
 import { statusCode } from "../../types/types.js";
+import bcrypt from "bcryptjs";
 /**
  * @desc    Create a new student
  * @route   POST /api/v1/students
@@ -26,10 +27,21 @@ export const createStudent = asyncHandler(async (req, res) => {
             throw new ErrorResponse("Student with this email already exists", statusCode.Conflict);
         }
     }
+    // Check if loginId already exists
+    const existingLoginId = await prisma.student.findUnique({
+        where: { loginId: data.loginId },
+    });
+    if (existingLoginId) {
+        throw new ErrorResponse("Login ID already exists", statusCode.Conflict);
+    }
+    if (data.password) {
+        data.password = await bcrypt.hash(data.password, 10);
+    }
     const student = await prisma.student.create({
         data,
     });
-    SuccessResponse(res, "Student created successfully", student, statusCode.Created);
+    const { password: _, ...studentWithoutPassword } = student;
+    SuccessResponse(res, "Student created successfully", studentWithoutPassword, statusCode.Created);
 });
 /**
  * @desc    Get all students with pagination and filtering
@@ -53,6 +65,7 @@ export const getAllStudents = asyncHandler(async (req, res) => {
             { firstName: { contains: String(search) } },
             { lastName: { contains: String(search) } },
             { email: { contains: String(search) } },
+            { loginId: { contains: String(search) } },
         ];
     }
     const [students, total] = await Promise.all([
@@ -131,11 +144,24 @@ export const updateStudent = asyncHandler(async (req, res) => {
             throw new ErrorResponse("Student with this email already exists", statusCode.Conflict);
         }
     }
+    // Check loginId uniqueness if loginId is being updated
+    if (data.loginId && data.loginId !== student.loginId) {
+        const existingLoginId = await prisma.student.findUnique({
+            where: { loginId: data.loginId },
+        });
+        if (existingLoginId) {
+            throw new ErrorResponse("Login ID already exists", statusCode.Conflict);
+        }
+    }
+    if (data.password) {
+        data.password = await bcrypt.hash(data.password, 10);
+    }
     const updatedStudent = await prisma.student.update({
         where: { id },
         data,
     });
-    SuccessResponse(res, "Student updated successfully", updatedStudent, statusCode.OK);
+    const { password: _, ...studentWithoutPassword } = updatedStudent;
+    SuccessResponse(res, "Student updated successfully", studentWithoutPassword, statusCode.OK);
 });
 /**
  * @desc    Delete student

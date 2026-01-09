@@ -12,13 +12,13 @@ export declare const createBookSchema: z.ZodObject<{
     schoolId: z.ZodString;
 }, z.core.$strip>;
 export declare const updateBookSchema: z.ZodObject<{
+    description: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     title: z.ZodOptional<z.ZodString>;
     author: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     isbn: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     category: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     publisher: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     edition: z.ZodOptional<z.ZodOptional<z.ZodString>>;
-    description: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     totalCopies: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     availableCopies: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
 }, z.core.$strip>;

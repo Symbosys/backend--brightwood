@@ -2,6 +2,7 @@ import { z } from "zod";
 export declare const createStudentSchema: z.ZodObject<{
     firstName: z.ZodString;
     lastName: z.ZodString;
+    loginId: z.ZodString;
     dateOfBirth: z.ZodOptional<z.ZodPipe<z.ZodTransform<Date | undefined, unknown>, z.ZodDate>>;
     gender: z.ZodOptional<z.ZodEnum<{
         MALE: "MALE";
@@ -13,13 +14,16 @@ export declare const createStudentSchema: z.ZodObject<{
     address: z.ZodOptional<z.ZodString>;
     enrollmentDate: z.ZodOptional<z.ZodPipe<z.ZodTransform<Date | undefined, unknown>, z.ZodDate>>;
     schoolId: z.ZodString;
+    password: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
 export declare const updateStudentSchema: z.ZodObject<{
     firstName: z.ZodOptional<z.ZodString>;
     lastName: z.ZodOptional<z.ZodString>;
     email: z.ZodOptional<z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>>;
     phone: z.ZodOptional<z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>>;
+    password: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     address: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    loginId: z.ZodOptional<z.ZodString>;
     dateOfBirth: z.ZodOptional<z.ZodOptional<z.ZodPipe<z.ZodTransform<Date | undefined, unknown>, z.ZodDate>>>;
     gender: z.ZodOptional<z.ZodOptional<z.ZodEnum<{
         MALE: "MALE";

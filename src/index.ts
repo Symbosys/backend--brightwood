@@ -21,10 +21,20 @@ import feeTypeRouter from "./routes/feeType.routes.js";
 import feeStructureRouter from "./routes/feeStructure.routes.js";
 import studentFeeRouter from "./routes/studentFee.routes.js";
 import feePaymentRouter from "./routes/feePayment.routes.js";
+import cors from "cors";
+import morgan from "morgan";
+
 const app = express();
 
 app.use(express.json()); // ✅ REQUIRED
 app.use(express.urlencoded({ extended: true }));
+
+app.use(cors({
+    origin: "*",  // Your React dev server
+    credentials: true,                // Important: allows cookies to be sent/received
+}));
+
+app.use(morgan('dev'));
 
 app.get("/", (req, res) => {
     console.log("Hello World!");
@@ -55,6 +65,6 @@ app.use('/api/v1/fee-payment', feePaymentRouter);
 
 app.use(errorMiddleware);
 
-app.listen(4000, () => {
-    console.log("Server is running on port 4000");
+app.listen(4000, '0.0.0.0', () => {
+    console.log("Server is running on http://0.0.0.0:4000");
 });

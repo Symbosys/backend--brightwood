@@ -124,15 +124,17 @@ model Section {
 
 // Teacher model: Represents educators in the school
 model Teacher {
-  id        String    @id @default(uuid())
-  firstName String
-  lastName  String
-  email     String    @unique
-  phone     String?
-  hireDate  DateTime?
-  schoolId  String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id             String    @id @default(uuid())
+  firstName      String
+  lastName       String
+  teacherLoginId String?   @unique
+  email          String    @unique
+  phone          String?
+  hireDate       DateTime?
+  schoolId       String
+  password       String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relationships
   school            School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -149,6 +151,7 @@ model Student {
   id             String    @id @default(uuid())
   firstName      String
   lastName       String
+  loginId        String?   @unique
   dateOfBirth    DateTime?
   gender         String?
   email          String?   @unique
@@ -156,6 +159,7 @@ model Student {
   address        String?
   enrollmentDate DateTime?
   schoolId       String
+  password       String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -174,15 +178,17 @@ model Student {
 
 // Parent model: Represents parents or guardians
 model Parent {
-  id           String              @id @default(uuid())
-  firstName    String
-  lastName     String
-  email        String?             @unique
-  phone        String?
-  address      String?
-  relationship ParentRelationship? // Optional type of relationship to student
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  id             String              @id @default(uuid())
+  firstName      String
+  lastName       String
+  parentsLoginId String?             @unique
+  email          String?             @unique
+  phone          String?
+  address        String?
+  relationship   ParentRelationship? // Optional type of relationship to student
+  password       String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   // Relationships
   children Student[] // Students this parent is associated with
@@ -350,7 +356,7 @@ model ExamResult {
   marksObtained Float
   remarks       String?
   absent        Boolean  @default(false)
-  createdAt     DateTime @default(now()) 
+  createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   // Relationships
