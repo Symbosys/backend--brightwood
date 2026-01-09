@@ -1,0 +1,507 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  // url      = env("DATABASE_URL")
+}
+
+// Enum for common statuses, e.g., for attendance
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+// Enum for parent relationship types (optional, for more granularity)
+enum ParentRelationship {
+  MOTHER
+  FATHER
+  GUARDIAN
+  OTHER
+}
+
+// AcademicYear model: Represents school academic sessions (e.g., 2023-2024) for tracking student progressions and historical data
+model AcademicYear {
+  id        String    @id @default(uuid())
+  name      String // e.g., "2023-2024"
+  startDate DateTime
+  endDate   DateTime?
+  schoolId  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relationships
+  school             School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  studentEnrollments StudentEnrollment[]
+  teacherAssignments TeacherAssignment[]
+  examTerms          ExamTerm[]
+  feeStructures      FeeStructure[]
+
+  @@unique([schoolId, name]) // Unique academic year names per school
+  @@index([schoolId])
+  @@index([startDate])
+}
+
+// School model: Represents the educational institution
+model School {
+  id            String    @id @default(uuid())
+  name          String
+  establishDate DateTime? // Date the school was established
+  address       String?
+  city          String?
+  state         String?
+  country       String?
+  postalCode    String?
+  phone         String?
+  email         String?   @unique
+  website       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relationships
+  teachers      Teacher[]
+  students      Student[]
+  classes       Class[]
+  subjects      Subject[]
+  academicYears AcademicYear[]
+  examTerms     ExamTerm[]
+  books         Book[]
+  feeTypes      FeeType[]
+  feeStructures FeeStructure[]
+
+  @@index([name])
+}
+
+// Class model: Represents a grade or class level (e.g., "Grade 3", "Class 5"). Classes are reused across years.
+model Class {
+  id         String   @id @default(uuid())
+  name       String // e.g., "Grade 3", "Class 5"
+  gradeLevel String? // e.g., "3", "5" (optional for sorting or filtering)
+  schoolId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relationships
+  school        School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  sections      Section[]
+  exams         Exam[]
+  feeStructures FeeStructure[]
+
+  @@unique([schoolId, name]) // Ensure unique class names per school
+  @@index([schoolId])
+}
+
+// Section model: Represents a section or division within a class (e.g., "A", "B"). Sections can be reused across years.
+model Section {
+  id             String   @id @default(uuid())
+  name           String // e.g., "A", "B"
+  capacity       Int? // Maximum students
+  classId        String
+  classTeacherId String? // The teacher assigned as class teacher (can change per year, but for simplicity, update as needed)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  class              Class               @relation(fields: [classId], references: [id], onDelete: Cascade)
+  classTeacher       Teacher?            @relation(fields: [classTeacherId], references: [id], onDelete: SetNull)
+  studentEnrollments StudentEnrollment[]
+  teacherAssignments TeacherAssignment[]
+
+  @@unique([classId, name]) // Ensure unique section names per class
+  @@index([classId])
+  @@index([classTeacherId])
+}
+
+// Teacher model: Represents educators in the school
+model Teacher {
+  id        String    @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String    @unique
+  phone     String?
+  hireDate  DateTime?
+  schoolId  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relationships
+  school            School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  sectionsAsTeacher Section[] // Sections where this teacher is assigned as class teacher
+  assignments       TeacherAssignment[] // Subjects and sections this teacher teaches
+  attendances       TeacherAttendance[]
+
+  @@index([email])
+  @@index([schoolId])
+}
+
+// Student model: Represents learners in the school
+model Student {
+  id             String    @id @default(uuid())
+  firstName      String
+  lastName       String
+  dateOfBirth    DateTime?
+  gender         String?
+  email          String?   @unique
+  phone          String?
+  address        String?
+  enrollmentDate DateTime?
+  schoolId       String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relationships
+  school      School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  enrollments StudentEnrollment[] // Historical section enrollments
+  parents     Parent[] // Parents/guardians of this student
+  attendances StudentAttendance[]
+  examResults ExamResult[]
+  bookIssues  BookIssue[]
+  fees        StudentFee[]
+
+  @@index([email])
+  @@index([schoolId])
+}
+
+// Parent model: Represents parents or guardians
+model Parent {
+  id           String              @id @default(uuid())
+  firstName    String
+  lastName     String
+  email        String?             @unique
+  phone        String?
+  address      String?
+  relationship ParentRelationship? // Optional type of relationship to student
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  // Relationships
+  children Student[] // Students this parent is associated with
+
+  @@index([email])
+}
+
+// Subject model: Represents academic subjects (e.g., Math, Science)
+model Subject {
+  id          String   @id @default(uuid())
+  name        String
+  code        String? // e.g., "MATH101"
+  description String?
+  schoolId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  school             School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacherAssignments TeacherAssignment[]
+  exams              Exam[]
+
+  @@unique([schoolId, name]) // Unique subject names per school
+  @@index([schoolId])
+}
+
+// StudentEnrollment model: Tracks student section assignments per academic year for progression history
+model StudentEnrollment {
+  id             String   @id @default(uuid())
+  studentId      String
+  sectionId      String
+  academicYearId String
+  enrollmentDate DateTime @default(now())
+  status         String? // e.g., "Active", "Completed", "Withdrawn"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  student            Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  section            Section             @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  academicYear       AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  studentAttendances StudentAttendance[]
+
+  @@unique([studentId, academicYearId]) // One enrollment per student per year
+  @@index([studentId])
+  @@index([sectionId])
+  @@index([academicYearId])
+}
+
+// TeacherAssignment model: Links teachers to subjects and sections they teach, optionally per academic year
+model TeacherAssignment {
+  id             String   @id @default(uuid())
+  teacherId      String
+  subjectId      String
+  sectionId      String
+  academicYearId String? // Optional: Tie to specific year if assignments change annually
+  assignedAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  teacher      Teacher       @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject      Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  section      Section       @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+
+  @@unique([teacherId, subjectId, sectionId, academicYearId]) // Prevent duplicates, allowing year-specific
+  @@index([teacherId])
+  @@index([subjectId])
+  @@index([sectionId])
+  @@index([academicYearId])
+}
+
+// StudentAttendance model: Tracks student attendance, linked to enrollment for section/class context
+model StudentAttendance {
+  id           String           @id @default(uuid())
+  studentId    String
+  enrollmentId String? // Link to the enrollment (section/year) at the time
+  date         DateTime
+  status       AttendanceStatus @default(PRESENT)
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relationships
+  student    Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  enrollment StudentEnrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, date]) // One record per student per day
+  @@index([studentId])
+  @@index([enrollmentId])
+  @@index([date])
+}
+
+// TeacherAttendance model: Tracks teacher attendance
+model TeacherAttendance {
+  id        String           @id @default(uuid())
+  teacherId String
+  date      DateTime
+  status    AttendanceStatus @default(PRESENT)
+  notes     String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Relationships
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, date]) // One record per teacher per day
+  @@index([teacherId])
+  @@index([date])
+}
+
+// ExamTerm model: Represents an examination period (e.g., "Mid Term", "Final Exam")
+model ExamTerm {
+  id             String    @id @default(uuid())
+  name           String // e.g., "First Term", "Finals"
+  academicYearId String
+  schoolId       String
+  startDate      DateTime?
+  endDate        DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relationships
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  exams        Exam[]
+
+  @@unique([schoolId, academicYearId, name])
+  @@index([schoolId])
+  @@index([academicYearId])
+}
+
+// Exam model: Represents a specific subject's exam within a term for a class
+model Exam {
+  id           String    @id @default(uuid())
+  name         String? // Optional descriptive name
+  examTermId   String
+  subjectId    String
+  classId      String
+  date         DateTime?
+  startTime    String? // e.g., "09:00 AM"
+  endTime      String? // e.g., "12:00 PM"
+  maxMarks     Float
+  passingMarks Float
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relationships
+  examTerm ExamTerm     @relation(fields: [examTermId], references: [id], onDelete: Cascade)
+  subject  Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  class    Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  results  ExamResult[]
+
+  @@index([examTermId])
+  @@index([subjectId])
+  @@index([classId])
+}
+
+// ExamResult model: Individual student's score in an exam
+model ExamResult {
+  id            String   @id @default(uuid())
+  examId        String
+  studentId     String
+  marksObtained Float
+  remarks       String?
+  absent        Boolean  @default(false)
+  createdAt     DateTime @default(now()) 
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  exam    Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, studentId]) // One result per student per exam
+  @@index([examId])
+  @@index([studentId])
+}
+
+// Enum for library book issue status
+enum IssueStatus {
+  ISSUED
+  RETURNED
+  OVERDUE
+  LOST
+}
+
+// Book model: Represents a book in the school library
+model Book {
+  id              String   @id @default(uuid())
+  title           String
+  author          String?
+  isbn            String?  @unique
+  category        String?
+  publisher       String?
+  edition         String?
+  description     String?  @db.Text
+  totalCopies     Int      @default(1)
+  availableCopies Int      @default(1)
+  schoolId        String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relationships
+  school School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  issues BookIssue[]
+
+  @@index([schoolId])
+  @@index([title])
+}
+
+// BookIssue model: Tracks books issued to students
+model BookIssue {
+  id         String      @id @default(uuid())
+  bookId     String
+  studentId  String
+  issueDate  DateTime    @default(now())
+  dueDate    DateTime
+  returnDate DateTime?
+  status     IssueStatus @default(ISSUED)
+  fineAmount Float       @default(0.0)
+  notes      String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  // Relationships
+  book    Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+  @@index([studentId])
+  @@index([status])
+}
+
+// Enum for fee payment status
+enum FeeStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+// FeeType model: Categorizes fees (e.g., Tuition, Library, Transport)
+model FeeType {
+  id          String   @id @default(uuid())
+  name        String // e.g., "Monthly Tuition"
+  description String?
+  schoolId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  school     School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  structures FeeStructure[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+}
+
+// FeeStructure model: Defines the amount for a FeeType for a Class and Year
+model FeeStructure {
+  id             String    @id @default(uuid())
+  feeTypeId      String
+  academicYearId String
+  classId        String
+  amount         Float
+  dueDate        DateTime?
+  schoolId       String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relationships
+  feeType      FeeType      @relation(fields: [feeTypeId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  studentFees  StudentFee[]
+
+  @@index([schoolId])
+  @@index([feeTypeId])
+  @@index([academicYearId])
+  @@index([classId])
+}
+
+// StudentFee model: Individual fee records assigned to students
+model StudentFee {
+  id             String    @id @default(uuid())
+  studentId      String
+  feeStructureId String
+  amount         Float // Custom amount for the student (defaults to structure amount)
+  discount       Float     @default(0.0)
+  dueDate        DateTime?
+  status         FeeStatus @default(UNPAID)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relationships
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  feeStructure FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+  payments     FeePayment[]
+
+  @@index([studentId])
+  @@index([feeStructureId])
+}
+
+// FeePayment model: Records actual financial transactions
+model FeePayment {
+  id            String   @id @default(uuid())
+  studentFeeId  String
+  amount        Float
+  paymentDate   DateTime @default(now())
+  paymentMethod String // e.g., "CASH", "ONLINE", "TRANSFER"
+  transactionId String?  @unique
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  studentFee StudentFee @relation(fields: [studentFeeId], references: [id], onDelete: Cascade)
+
+  @@index([studentFeeId])
+}
