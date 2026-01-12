@@ -6,22 +6,26 @@ const examBaseSchema = z.object({
     classId: z.string().uuid("Invalid Class ID"),
     date: z
         .preprocess((arg) => {
-        if (typeof arg === "string" || arg instanceof Date)
-            return new Date(arg);
-    }, z.date())
-        .optional(),
+        if (typeof arg === "string") {
+            const parsed = new Date(arg);
+            return isNaN(parsed.getTime()) ? undefined : parsed;
+        }
+        if (arg instanceof Date)
+            return arg;
+        return undefined;
+    }, z.date()).describe("Invalid date format (e.g., 2024-01-15)"),
     startTime: z
         .string()
-        .regex(/^(0?[1-9]|1[0-2]):[0-5][0-9]\s(AM|PM)$/i, "Invalid time format (e.g., 09:00 AM)")
+        .regex(/^((0?[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM|am|pm)|([01]?[0-9]|2[0-3]):[0-5][0-9])$/, "Invalid time format (e.g., 09:00 AM or 09:00)")
         .optional()
         .or(z.literal("")),
     endTime: z
         .string()
-        .regex(/^(0?[1-9]|1[0-2]):[0-5][0-9]\s(AM|PM)$/i, "Invalid time format (e.g., 12:00 PM)")
+        .regex(/^((0?[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM|am|pm)|([01]?[0-9]|2[0-3]):[0-5][0-9])$/, "Invalid time format (e.g., 12:00 PM or 14:00)")
         .optional()
         .or(z.literal("")),
-    maxMarks: z.number().min(0, "Max marks must be a positive number"),
-    passingMarks: z.number().min(0, "Passing marks must be a positive number"),
+    maxMarks: z.coerce.number().min(0, "Max marks must be a positive number"),
+    passingMarks: z.coerce.number().min(0, "Passing marks must be a positive number"),
 });
 export const createExamSchema = examBaseSchema.refine((data) => data.passingMarks <= data.maxMarks, {
     message: "Passing marks cannot be greater than maximum marks",

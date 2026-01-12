@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 /**
- * @desc    Parent Login
+ * @desc    Parent Login - Modified for ID-only access
  * @route   POST /api/v1/parent/login
  * @access  Public
  */

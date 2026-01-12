@@ -9,7 +9,7 @@ import { statusCode } from "../../types/types.js";
  * @desc    Enroll a student into a section for an academic year
  * @route   POST /api/v1/enrollment/create
  * @access  Private/Admin
- */
+ */                                                                                                                                                                
 export const createEnrollment = asyncHandler(async (req: Request, res: Response) => {
     const data = createEnrollmentSchema.parse(req.body);
 

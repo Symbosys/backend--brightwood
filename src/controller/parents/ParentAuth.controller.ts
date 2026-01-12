@@ -4,17 +4,32 @@ import { parentLoginSchema } from "../../validation/UserAuth.validation.js";
 import prisma from "../../config/prisma.js";
 import { ErrorResponse, SuccessResponse } from "../../utils/response.util.js";
 import { statusCode } from "../../types/types.js";
-import bcrypt from "bcryptjs";
 import { JWT } from "../../utils/jwt.utils.js";
 
 /**
- * @desc    Parent Login
+ * @desc    Parent Login - Modified for ID-only access
  * @route   POST /api/v1/parent/login
  * @access  Public
  */
 export const parentLogin = asyncHandler(async (req: Request, res: Response) => {
-    const { parentsLoginId, password } = parentLoginSchema.parse(req.body);
+    // Log incoming request for debugging
+    console.log('[Parent Login] Request body:', JSON.stringify(req.body, null, 2));
 
+    // 1. Validate request body
+    // NOTE: If your Zod schema (parentLoginSchema) requires a password string, 
+    // ensure it allows an empty string since the frontend sends: password: ""
+    let validatedData;
+    try {
+        validatedData = parentLoginSchema.parse(req.body);
+    } catch (error: any) {
+        console.error('[Parent Login] Validation error:', error);
+        throw new ErrorResponse("Validation Error: Invalid request data", statusCode.Bad_Request);
+    }
+
+    const { parentsLoginId } = validatedData;
+    console.log(`[Parent Login] Attempting login for ID: ${parentsLoginId}`);
+
+    // 2. Find parent by parentsLoginId with children data
     const parent = await prisma.parent.findUnique({
         where: { parentsLoginId },
         include: {
@@ -30,52 +45,36 @@ export const parentLogin = asyncHandler(async (req: Request, res: Response) => {
         }
     });
 
+    // 3. Check if parent exists
     if (!parent) {
-        throw new ErrorResponse("Invalid credentials", statusCode.Unauthorized);
+        console.log(`[Parent Login] Parent not found: ${parentsLoginId}`);
+        throw new ErrorResponse("Invalid credentials: Parent ID not found", statusCode.Unauthorized);
     }
 
-    let loginWarning = null;
+    console.log(`[Parent Login] Parent found: ${parent.firstName} ${parent.lastName}`);
 
-    // Check if password exists
-    if (!parent.password) {
-        // Fallback: Check if the provided password matches any child's date of birth (DDMMYYYY)
-        const matchedChild = parent.children.find(child => {
-            if (!child.dateOfBirth) return false;
+    // 4. Verification logic
+    // We are skipping bcrypt.compare(password, parent.password) 
+    // because the requirement is to login using ONLY the Parent ID.
+    console.log('[Parent Login] ID verified. Proceeding to generate token...');
 
-            const d = child.dateOfBirth;
-            const day = String(d.getUTCDate()).padStart(2, '0');
-            const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-            const year = d.getUTCFullYear();
-            const dobString = `${day}${month}${year}`;
-
-            console.log(`[Parent Login Debug] Child: ${child.firstName}, Received: ${password}, Expected: ${dobString}`);
-            return password === dobString;
-        });
-
-        if (!matchedChild) {
-            throw new ErrorResponse("Account not setup. Please use your child's Date of Birth (DDMMYYYY) or contact admin.", statusCode.Unauthorized);
-        }
-
-        loginWarning = "Security Warning: You are using a default password. Please update your password immediately.";
-    } else {
-        // Compare hashed password
-        const isMatch = await bcrypt.compare(password, parent.password);
-        if (!isMatch) {
-            throw new ErrorResponse("Invalid credentials", statusCode.Unauthorized);
-        }
-    }
-
+    // 5. Generate JWT token
     const token = JWT.generateToken({
         id: parent.id,
         role: "PARENT",
     });
 
+    console.log('[Parent Login] Token generated successfully');
+
+    // 6. Remove password field from the database object before sending to frontend
     const { password: _, ...parentData } = parent;
 
+    // 7. Send success response
     SuccessResponse(res, "Login successful", {
         user: parentData,
         role: "PARENT",
-        token,
-        warning: loginWarning
+        token
     }, statusCode.OK);
+
+    console.log(`[Parent Login] Login successful for: ${parentsLoginId}`);
 });

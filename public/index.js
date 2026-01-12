@@ -21,6 +21,7 @@ import feeTypeRouter from "./routes/feeType.routes.js";
 import feeStructureRouter from "./routes/feeStructure.routes.js";
 import studentFeeRouter from "./routes/studentFee.routes.js";
 import feePaymentRouter from "./routes/feePayment.routes.js";
+import authRouter from "./routes/auth.routes.js";
 import cors from "cors";
 import morgan from "morgan";
 const app = express();
@@ -55,6 +56,7 @@ app.use('/api/v1/fee-type', feeTypeRouter);
 app.use('/api/v1/fee-structure', feeStructureRouter);
 app.use('/api/v1/student-fee', studentFeeRouter);
 app.use('/api/v1/fee-payment', feePaymentRouter);
+app.use('/api/v1/auth', authRouter);
 app.use(errorMiddleware);
 app.listen(4000, '0.0.0.0', () => {
     console.log("Server is running on http://0.0.0.0:4000");

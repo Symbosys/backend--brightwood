@@ -78,8 +78,29 @@ model School {
   books         Book[]
   feeTypes      FeeType[]
   feeStructures FeeStructure[]
+  admins        Admin[]
 
   @@index([name])
+}
+
+// Admin model: Represents administrators who can login to the admin panel
+model Admin {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String   @unique
+  password  String
+  role      String   @default("admin") // e.g., "super_admin", "admin", "staff"
+  isActive  Boolean  @default(true)
+  schoolId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([schoolId])
 }
 
 // Class model: Represents a grade or class level (e.g., "Grade 3", "Class 5"). Classes are reused across years.
