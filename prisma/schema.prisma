@@ -79,6 +79,7 @@ model School {
   feeTypes      FeeType[]
   feeStructures FeeStructure[]
   admins        Admin[]
+  expenses      Expense[]
 
   @@index([name])
 }
@@ -343,7 +344,7 @@ model ExamTerm {
   @@index([academicYearId])
 }
 
-// Exam model: Represents a specific subject's exam within a term for a class
+// it is indexmodel: Represents a specific subject's exam within a term for a class
 model Exam {
   id           String    @id @default(uuid())
   name         String? // Optional descriptive name
@@ -531,4 +532,35 @@ model FeePayment {
   studentFee StudentFee @relation(fields: [studentFeeId], references: [id], onDelete: Cascade)
 
   @@index([studentFeeId])
+}
+
+// Enum for expense status
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Expense model: Tracks school expenditures
+model Expense {
+  id          String        @id @default(uuid())
+  title       String
+  description String?       @db.Text
+  category    String // e.g., "Utility", "Office", "Academic", "Capital"
+  amount      Float
+  expenseDate DateTime      @default(now())
+  status      ExpenseStatus @default(PENDING)
+  receiptUrl  String? // URL to receipt image/document
+  notes       String?
+  schoolId    String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relationships
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([category])
+  @@index([status])
+  @@index([expenseDate])
 }

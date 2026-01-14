@@ -3,6 +3,7 @@ import { createTeacherAttendanceSchema } from "../../validation/TeacherAttendanc
 import prisma from "../../config/prisma.js";
 import { ErrorResponse, SuccessResponse } from "../../utils/response.util.js";
 import { statusCode } from "../../types/types.js";
+import { id } from "zod/v4/locales";
 /**
  * @desc    Mark attendance for a teacher
  * @route   POST /api/v1/teacher-attendance/mark

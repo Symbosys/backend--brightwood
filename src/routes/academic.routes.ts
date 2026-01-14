@@ -2,18 +2,19 @@ import express from "express";
 import {
     createAcademic,
     deleteAcademic,
-
-    getAcademic,
+    getAllAcademicYears,
+    getAcademicYearById,
     updateAcademic,
 } from "../controller/student/Academic.controller.js";
 
 const router = express.Router();
 
-router.route("/").post(createAcademic);
+router.route("/")
+    .post(createAcademic)
+    .get(getAllAcademicYears);
 
-router
-    .route("/:id")
-    .get(getAcademic)
+router.route("/:id")
+    .get(getAcademicYearById)
     .put(updateAcademic)
     .delete(deleteAcademic);
 

@@ -58,13 +58,15 @@ export const getStudentFees = asyncHandler(async (req, res) => {
             skip,
             take: limitNumber,
             include: {
-                student: { select: { firstName: true, lastName: true } },
+                student: { select: { id: true, firstName: true, lastName: true, email: true, loginId: true } },
                 feeStructure: {
                     include: {
-                        feeType: { select: { name: true } },
-                        academicYear: { select: { name: true } }
+                        feeType: { select: { id: true, name: true } },
+                        academicYear: { select: { id: true, name: true } },
+                        class: { select: { id: true, name: true } }
                     }
-                }
+                },
+                payments: true
             },
             orderBy: { createdAt: 'desc' }
         }),

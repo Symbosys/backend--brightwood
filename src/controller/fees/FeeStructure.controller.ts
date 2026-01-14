@@ -66,9 +66,10 @@ export const getAllFeeStructures = asyncHandler(async (req: Request, res: Respon
             skip,
             take: limitNumber,
             include: {
-                feeType: { select: { name: true } },
-                class: { select: { name: true } },
-                academicYear: { select: { name: true } }
+                feeType: { select: { id: true, name: true } },
+                class: { select: { id: true, name: true } },
+                academicYear: { select: { id: true, name: true } },
+                _count: { select: { studentFees: true } }
             },
             orderBy: { createdAt: 'desc' }
         }),

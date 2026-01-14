@@ -4,4 +4,5 @@ export declare const getAllSchools: (req: Request, res: Response, next: import("
 export declare const getSchoolById: (req: Request, res: Response, next: import("express").NextFunction) => void;
 export declare const updateSchool: (req: Request, res: Response, next: import("express").NextFunction) => void;
 export declare const deleteSchool: (req: Request, res: Response, next: import("express").NextFunction) => void;
+export declare const getDashboardStats: (req: Request, res: Response, next: import("express").NextFunction) => void;
 //# sourceMappingURL=School.controller.d.ts.map

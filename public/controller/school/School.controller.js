@@ -102,4 +102,129 @@ export const deleteSchool = asyncHandler(async (req, res) => {
     });
     SuccessResponse(res, "School deleted successfully", null, statusCode.OK);
 });
+export const getDashboardStats = asyncHandler(async (req, res) => {
+    if (!req.admin) {
+        throw new ErrorResponse("Not authorized", statusCode.Unauthorized);
+    }
+    const { schoolId } = req.admin;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    // Parallel fetch for main stats
+    const [totalStudents, totalTeachers, totalFeesResult, attendanceToday] = await Promise.all([
+        prisma.student.count({ where: { schoolId } }),
+        prisma.teacher.count({ where: { schoolId } }),
+        prisma.feePayment.aggregate({
+            _sum: { amount: true },
+            where: { studentFee: { student: { schoolId } } }
+        }),
+        prisma.studentAttendance.findMany({
+            where: {
+                date: today,
+                student: { schoolId }
+            },
+            select: { status: true }
+        })
+    ]);
+    // Calculate Attendance Percentage
+    let attendancePct = 0;
+    if (attendanceToday.length > 0) {
+        const presentCount = attendanceToday.filter(a => a.status === 'PRESENT' || a.status === 'LATE').length;
+        attendancePct = Math.round((presentCount / attendanceToday.length) * 100);
+    }
+    // Chart Data (Last 6 Months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setDate(1);
+    sixMonthsAgo.setHours(0, 0, 0, 0);
+    const [monthlyPayments, monthlyAdmissions] = await Promise.all([
+        prisma.feePayment.findMany({
+            where: {
+                paymentDate: { gte: sixMonthsAgo },
+                studentFee: { student: { schoolId } }
+            },
+            select: { paymentDate: true, amount: true }
+        }),
+        prisma.student.findMany({
+            where: {
+                enrollmentDate: { gte: sixMonthsAgo },
+                schoolId
+            },
+            select: { enrollmentDate: true }
+        })
+    ]);
+    // Process Chart Data
+    const chartData = [];
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    // Create base 6 months array
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const monthIndex = d.getMonth();
+        const year = d.getFullYear();
+        const label = monthNames[monthIndex];
+        // Filter payments for this month/year
+        const revenue = monthlyPayments
+            .filter(p => {
+            const pd = new Date(p.paymentDate);
+            return pd.getMonth() === monthIndex && pd.getFullYear() === year;
+        })
+            .reduce((sum, p) => sum + p.amount, 0);
+        // Filter admissions for this month/year
+        const students = monthlyAdmissions
+            .filter(s => {
+            if (!s.enrollmentDate)
+                return false;
+            const ed = new Date(s.enrollmentDate);
+            return ed.getMonth() === monthIndex && ed.getFullYear() === year;
+        })
+            .length;
+        chartData.push({
+            name: label,
+            revenue,
+            students
+        });
+    }
+    // Recent Activities (Mocked/Aggregated)
+    // Fetch latest 2 students and latest 2 payments to simulate activity feed
+    const [recentStudents, recentPayments] = await Promise.all([
+        prisma.student.findMany({
+            where: { schoolId },
+            orderBy: { createdAt: 'desc' },
+            take: 3,
+            select: { firstName: true, lastName: true, createdAt: true }
+        }),
+        prisma.feePayment.findMany({
+            where: { studentFee: { student: { schoolId } } },
+            orderBy: { createdAt: 'desc' },
+            take: 3,
+            select: { amount: true, createdAt: true, studentFee: { select: { student: { select: { firstName: true, lastName: true } } } } }
+        })
+    ]);
+    const recentActivities = [
+        ...recentStudents.map(s => ({
+            id: `student-${s.createdAt.getTime()}`,
+            type: 'admission',
+            user: `${s.firstName} ${s.lastName}`,
+            time: s.createdAt,
+            detail: 'New student admission'
+        })),
+        ...recentPayments.map(p => ({
+            id: `payment-${p.createdAt.getTime()}`,
+            type: 'payment',
+            user: p.studentFee?.student ? `${p.studentFee.student.firstName} ${p.studentFee.student.lastName}` : 'Unknown',
+            time: p.createdAt,
+            detail: `Fee payment of $${p.amount} received`
+        }))
+    ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
+    SuccessResponse(res, "Dashboard stats fetched", {
+        stats: {
+            totalStudents,
+            totalTeachers,
+            feesCollected: totalFeesResult._sum.amount || 0,
+            attendancePct
+        },
+        chartData,
+        recentActivities
+    }, statusCode.OK);
+});
 //# sourceMappingURL=School.controller.js.map
