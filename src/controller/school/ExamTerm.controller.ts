@@ -11,6 +11,7 @@ import { statusCode } from "../../types/types.js";
  * @access  Private/Admin
  */
 export const createExamTerm = asyncHandler(async (req: Request, res: Response) => {
+    // Validate request body
     const data = createExamTermSchema.parse(req.body);
 
     // 1. Check if School exists
@@ -119,20 +120,24 @@ export const updateExamTerm = asyncHandler(async (req: Request, res: Response) =
     const examTerm = await prisma.examTerm.findUnique({ where: { id } });
     if (!examTerm) throw new ErrorResponse("Exam term not found", statusCode.Not_Found);
 
-    // If updating name, check uniqueness
-    if (data.name && data.name !== examTerm.name) {
+    // If updating name or academicYear, check for duplicates
+    if (data.name || data.academicYearId) {
+        const targetName = data.name || examTerm.name;
+        const targetAcademicYearId = data.academicYearId || examTerm.academicYearId;
+
         const existingTerm = await prisma.examTerm.findUnique({
             where: {
                 schoolId_academicYearId_name: {
                     schoolId: examTerm.schoolId,
-                    academicYearId: examTerm.academicYearId,
-                    name: data.name,
+                    academicYearId: targetAcademicYearId,
+                    name: targetName,
                 },
             },
         });
 
-        if (existingTerm) {
-            throw new ErrorResponse(`Exam term '${data.name}' already exists for this academic year`, statusCode.Conflict);
+        // Ensure we aren't colliding with ANOTHER term (not self)
+        if (existingTerm && existingTerm.id !== id) {
+            throw new ErrorResponse(`Exam term '${targetName}' already exists for the selected academic year`, statusCode.Conflict);
         }
     }
 

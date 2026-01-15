@@ -1,9 +1,9 @@
 import { z } from "zod";
 export declare const FeeStatusEnum: z.ZodEnum<{
-    OVERDUE: "OVERDUE";
     UNPAID: "UNPAID";
     PARTIAL: "PARTIAL";
     PAID: "PAID";
+    OVERDUE: "OVERDUE";
 }>;
 export declare const createStudentFeeSchema: z.ZodObject<{
     studentId: z.ZodString;
@@ -12,10 +12,10 @@ export declare const createStudentFeeSchema: z.ZodObject<{
     discount: z.ZodDefault<z.ZodNumber>;
     dueDate: z.ZodOptional<z.ZodCoercedDate<unknown>>;
     status: z.ZodDefault<z.ZodEnum<{
-        OVERDUE: "OVERDUE";
         UNPAID: "UNPAID";
         PARTIAL: "PARTIAL";
         PAID: "PAID";
+        OVERDUE: "OVERDUE";
     }>>;
 }, z.core.$strip>;
 export declare const updateStudentFeeSchema: z.ZodObject<{
@@ -25,10 +25,10 @@ export declare const updateStudentFeeSchema: z.ZodObject<{
     discount: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     dueDate: z.ZodOptional<z.ZodOptional<z.ZodCoercedDate<unknown>>>;
     status: z.ZodOptional<z.ZodDefault<z.ZodEnum<{
-        OVERDUE: "OVERDUE";
         UNPAID: "UNPAID";
         PARTIAL: "PARTIAL";
         PAID: "PAID";
+        OVERDUE: "OVERDUE";
     }>>>;
 }, z.core.$strip>;
 //# sourceMappingURL=StudentFee.validation.d.ts.map

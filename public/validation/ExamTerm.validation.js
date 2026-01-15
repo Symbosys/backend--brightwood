@@ -19,6 +19,7 @@ const examTermBaseSchema = z.object({
             return new Date(arg);
     }, z.date())
         .optional(),
+    isActive: z.boolean().optional(),
 });
 export const createExamTermSchema = examTermBaseSchema.refine((data) => {
     if (data.startDate && data.endDate) {
@@ -29,7 +30,7 @@ export const createExamTermSchema = examTermBaseSchema.refine((data) => {
     message: "End date must be after start date",
     path: ["endDate"],
 });
-export const updateExamTermSchema = examTermBaseSchema.partial().omit({ schoolId: true, academicYearId: true }).refine((data) => {
+export const updateExamTermSchema = examTermBaseSchema.partial().omit({ schoolId: true }).refine((data) => {
     if (data.startDate && data.endDate) {
         return data.endDate >= data.startDate;
     }

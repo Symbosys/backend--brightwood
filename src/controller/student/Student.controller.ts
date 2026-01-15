@@ -48,9 +48,8 @@ export const createStudent = asyncHandler(async (req: Request, res: Response) =>
     }
 
     const student = await prisma.student.create({
-        data,
+        data: data,
     });
-
     const { password: _, ...studentWithoutPassword } = student;
 
     SuccessResponse(res, "Student created successfully", studentWithoutPassword, statusCode.Created);
@@ -70,8 +69,10 @@ export const getAllStudents = asyncHandler(async (req: Request, res: Response) =
 
     const whereClause: any = {};
 
-    if (schoolId) {
-        whereClause.schoolId = String(schoolId);
+    const effectiveSchoolId = (req.admin?.schoolId as string) || (schoolId as string);
+
+    if (effectiveSchoolId) {
+        whereClause.schoolId = effectiveSchoolId;
     }
 
     if (gender) {
@@ -97,6 +98,20 @@ export const getAllStudents = asyncHandler(async (req: Request, res: Response) =
                 school: {
                     select: { name: true },
                 },
+                enrollments: {
+                    include: {
+                        section: {
+                            include: {
+                                class: true,
+                            },
+                        },
+                    },
+                    take: 1,
+                    orderBy: { createdAt: 'desc' }
+                },
+                parents: {
+                    take: 1
+                }
             },
         }),
         prisma.student.count({ where: whereClause }),

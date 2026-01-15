@@ -1,8 +1,8 @@
 import { z } from "zod";
 export declare const IssueStatusEnum: z.ZodEnum<{
+    OVERDUE: "OVERDUE";
     ISSUED: "ISSUED";
     RETURNED: "RETURNED";
-    OVERDUE: "OVERDUE";
     LOST: "LOST";
 }>;
 export declare const createBookIssueSchema: z.ZodObject<{
@@ -26,9 +26,9 @@ export declare const updateBookIssueSchema: z.ZodObject<{
     dueDate: z.ZodOptional<z.ZodCoercedDate<unknown>>;
     notes: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     status: z.ZodOptional<z.ZodEnum<{
+        OVERDUE: "OVERDUE";
         ISSUED: "ISSUED";
         RETURNED: "RETURNED";
-        OVERDUE: "OVERDUE";
         LOST: "LOST";
     }>>;
     fineAmount: z.ZodOptional<z.ZodNumber>;

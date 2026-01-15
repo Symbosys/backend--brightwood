@@ -5,11 +5,14 @@ export declare const createExamTermSchema: z.ZodObject<{
     schoolId: z.ZodString;
     startDate: z.ZodOptional<z.ZodPipe<z.ZodTransform<Date | undefined, unknown>, z.ZodDate>>;
     endDate: z.ZodOptional<z.ZodPipe<z.ZodTransform<Date | undefined, unknown>, z.ZodDate>>;
+    isActive: z.ZodOptional<z.ZodBoolean>;
 }, z.core.$strip>;
 export declare const updateExamTermSchema: z.ZodObject<{
     name: z.ZodOptional<z.ZodString>;
+    academicYearId: z.ZodOptional<z.ZodString>;
     startDate: z.ZodOptional<z.ZodOptional<z.ZodPipe<z.ZodTransform<Date | undefined, unknown>, z.ZodDate>>>;
     endDate: z.ZodOptional<z.ZodOptional<z.ZodPipe<z.ZodTransform<Date | undefined, unknown>, z.ZodDate>>>;
+    isActive: z.ZodOptional<z.ZodOptional<z.ZodBoolean>>;
 }, z.core.$strip>;
 export type CreateExamTermInput = z.infer<typeof createExamTermSchema>;
 export type UpdateExamTermInput = z.infer<typeof updateExamTermSchema>;

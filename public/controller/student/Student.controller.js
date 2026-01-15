@@ -38,7 +38,7 @@ export const createStudent = asyncHandler(async (req, res) => {
         data.password = await bcrypt.hash(data.password, 10);
     }
     const student = await prisma.student.create({
-        data,
+        data: data,
     });
     const { password: _, ...studentWithoutPassword } = student;
     SuccessResponse(res, "Student created successfully", studentWithoutPassword, statusCode.Created);
@@ -54,8 +54,9 @@ export const getAllStudents = asyncHandler(async (req, res) => {
     const limitNumber = Number(limit);
     const skip = (pageNumber - 1) * limitNumber;
     const whereClause = {};
-    if (schoolId) {
-        whereClause.schoolId = String(schoolId);
+    const effectiveSchoolId = req.admin?.schoolId || schoolId;
+    if (effectiveSchoolId) {
+        whereClause.schoolId = effectiveSchoolId;
     }
     if (gender) {
         whereClause.gender = String(gender);
@@ -78,6 +79,20 @@ export const getAllStudents = asyncHandler(async (req, res) => {
                 school: {
                     select: { name: true },
                 },
+                enrollments: {
+                    include: {
+                        section: {
+                            include: {
+                                class: true,
+                            },
+                        },
+                    },
+                    take: 1,
+                    orderBy: { createdAt: 'desc' }
+                },
+                parents: {
+                    take: 1
+                }
             },
         }),
         prisma.student.count({ where: whereClause }),

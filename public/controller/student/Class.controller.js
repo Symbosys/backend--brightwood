@@ -44,6 +44,9 @@ export const getAllClasses = asyncHandler(async (req, res) => {
             take: limitNumber,
             orderBy: { name: 'asc' },
             include: {
+                sections: {
+                    orderBy: { name: 'asc' }
+                },
                 _count: {
                     select: { sections: true }
                 }
